@@ -14,13 +14,13 @@ RSpec.describe "User visits articles by tag", type: :system do
     context "when 2 articles" do
       before { visit "/t/javascript" }
 
-      it "shows the header", js: true, percy: true do
+      it "shows the header", js: true, percy: true, raise_server_errors: false do
         Percy.snapshot(page, name: "Tags: logged out user")
 
         within("h1") { expect(page).to have_text("javascript") }
       end
 
-      it "shows the follow button", js: true do
+      it "shows the follow button", js: true, raise_server_errors: false do
         within("h1") { expect(page).to have_button("Follow") }
       end
 
@@ -44,7 +44,7 @@ RSpec.describe "User visits articles by tag", type: :system do
         end
       end
 
-      it "when user clicks 'week'", js: true do
+      it "when user clicks 'week'", js: true, raise_server_errors: false do
         click_on "WEEK"
 
         within("#articles-list") do

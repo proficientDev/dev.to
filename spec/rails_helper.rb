@@ -72,7 +72,8 @@ module Devise
       def sign_in(resource, scope: nil)
         scope ||= Devise::Mapping.find_scope!(resource)
         puts("SIGN_IN user SCOPE: #{scope}")
-        login_as(resource, scope: scope)
+        # login_as(resource, scope: scope)
+        login_permanently_as(resource, scope: scope)
       end
     end
   end
@@ -88,41 +89,48 @@ module Warden
           proxy.set_user(user, opts)
         end
       end
-    end
-  end
-end
 
-module Warden
-  class Proxy
-    def set_user(user, opts = {})
-      scope = (opts[:scope] ||= @config.default_scope)
-
-      # Get the default options from the master configuration for the given scope
-      opts = (@config[:scope_defaults][scope] || {}).merge(opts)
-      opts[:event] ||= :set_user
-      @users[scope] = user
-
-      if opts[:store] != false && opts[:event] != :fetch
-        options = env[ENV_SESSION_OPTIONS]
-        if options
-          if options.frozen?
-            env[ENV_SESSION_OPTIONS] = options.merge(renew: true).freeze
-          else
-            options[:renew] = true
-          end
+      def login_permanently_as(user, opts = {})
+        Warden::Manager.on_request do |proxy|
+          opts[:event] || :authentication
+          proxy.set_user(user, opts)
         end
-        session_serializer.store(user, scope)
       end
-
-      run_callbacks = opts.fetch(:run_callbacks, true)
-      manager._run_callbacks(:after_set_user, user, self, opts) if run_callbacks
-
-      r = @users[scope]
-      puts("SET_USER RESULT: #{r}")
-      r
     end
   end
 end
+
+# module Warden
+#   class Proxy
+#     def set_user(user, opts = {})
+#       scope = (opts[:scope] ||= @config.default_scope)
+
+#       # Get the default options from the master configuration for the given scope
+#       opts = (@config[:scope_defaults][scope] || {}).merge(opts)
+#       opts[:event] ||= :set_user
+#       @users[scope] = user
+
+#       if opts[:store] != false && opts[:event] != :fetch
+#         options = env[ENV_SESSION_OPTIONS]
+#         if options
+#           if options.frozen?
+#             env[ENV_SESSION_OPTIONS] = options.merge(renew: true).freeze
+#           else
+#             options[:renew] = true
+#           end
+#         end
+#         session_serializer.store(user, scope)
+#       end
+
+#       run_callbacks = opts.fetch(:run_callbacks, true)
+#       manager._run_callbacks(:after_set_user, user, self, opts) if run_callbacks
+
+#       r = @users[scope]
+#       puts("SET_USER RESULT: #{r}")
+#       r
+#     end
+#   end
+# end
 
 # module Warden
 #   module Hooks
@@ -221,6 +229,14 @@ RSpec.configure do |config|
   config.include OmniauthHelpers
   config.include SidekiqTestHelpers
   config.include ElasticsearchHelpers
+
+  config.after(:each, type: :system) do
+    Warden::Manager._on_request.clear
+  end
+
+  config.after(:each, type: :request) do
+    Warden::Manager._on_request.clear
+  end
 
   config.before(:suite) do
     Search::Cluster.recreate_indexes

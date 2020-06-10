@@ -71,7 +71,7 @@ module Devise
     module IntegrationHelpers
       def sign_in(resource, scope: nil)
         scope ||= Devise::Mapping.find_scope!(resource)
-        puts("SIGN_IN user SCOPE: #{scope}")
+        # puts("SIGN_IN user SCOPE: #{scope}")
         # login_as(resource, scope: scope)
         login_permanently_as(resource, scope: scope)
       end
@@ -87,6 +87,15 @@ module Warden
           opts[:event] ||= :authentication
           puts("USER: #{user} OPTS: #{opts}")
           proxy.set_user(user, opts)
+        end
+      end
+
+      def logout(*scopes)
+        # Warden.on_next_request do |proxy|
+        #   proxy.logout(*scopes)
+        # end
+        Warden::Manager.on_request do |proxy|
+          proxy.logout(*scopes)
         end
       end
 
